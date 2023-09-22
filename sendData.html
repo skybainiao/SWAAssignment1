@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Send Weather Data</title>
+</head>
+
+<body>
+<form id="weatherForm">
+  <label for="city">city:</label>
+  <input type="text" id="city" name="city" required><br>
+
+  <label for="type">type:</label>
+  <input type="text" id="type" name="type" required><br>
+
+  <label for="value">value:</label>
+  <input type="text" id="value" name="value" required><br>
+
+  <label for="unit">unit:</label>
+  <input type="text" id="unit" name="unit" required><br>
+
+  <button type="button" onclick="sendData()">sendData</button>
+</form>
+
+<script>
+  document.getElementById('weatherForm').addEventListener('submit', function (e) {
+    e.preventDefault(); // 阻止表单的默认提交行为
+    sendData(); // 发送数据
+  });
+
+  function sendData() {
+    var form = document.getElementById('weatherForm');
+    var city = form.city.value;
+    var type = form.type.value;
+    var value = form.value.value;
+    var unit = form.unit.value;
+
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      if (this.readyState === 4 && this.status === 200) {
+        alert('数据发送成功!');
+      }
+    };
+    xhr.open("POST", `http://localhost:8080/data`, true);
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.send(JSON.stringify({ city: city, type: type, value: value, unit: unit }));
+  }
+</script>
+</body>
+
+</html>

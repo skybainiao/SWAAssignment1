@@ -1,0 +1,101 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta property="og:title" content="">
+  <meta property="og:type" content="">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
+
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="icon.png">
+  <!-- Place favicon.ico in the root directory -->
+
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/main.css">
+
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+
+  <!-- Add your site or application content here -->
+  <div id="citySelector">
+    <button onclick="loadData('Horsens')">Horsens</button>
+    <button onclick="loadData('Aarhus')">Aarhus</button>
+    <button onclick="loadData('Copenhagen')">Copenhagen</button>
+  </div>
+  <div id="weatherData"></div>
+
+  <script>
+    function loadData(city) {
+      var div = document.getElementById("weatherData");
+      div.innerHTML = `<h1>${city}</h1>`;
+
+      fetchData(city, 'data', '最新测量值');
+      fetchData(city, 'forecast', '未来24小时每小时预报');
+
+      fetchData(city, 'minTemperature', '最后一天最低气温');
+      fetchData(city, 'maxTemperature', '最后一天最高气温');
+      fetchData(city, 'totalPrecipitation', '前一天总降水量');
+      fetchData(city, 'averageWindSpeed', '前一日平均风速');
+    }
+
+    function fetchData(city, endpoint, title) {
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+          var data = JSON.parse(this.responseText);
+          if (endpoint === 'minTemperature' || endpoint === 'maxTemperature' || endpoint === 'totalPrecipitation' || endpoint === 'averageWindSpeed') {
+            displayLastDayData(city, data, title);
+          } else {
+            displayData(city, data, title);
+          }
+        }
+      };
+      xhr.open("GET", `http://localhost:8080/${endpoint}/${city}`, true);
+      xhr.send();
+    }
+
+    function displayData(city, dataArray, title) {
+      var div = document.getElementById("weatherData");
+      div.innerHTML += `<h2>${title}</h2>`;
+      if (Array.isArray(dataArray)) {
+        dataArray.forEach(data => {
+          div.innerHTML += `<p>${data.time} - 类型: ${data.type} 值: ${data.value} ${data.unit}</p>`;
+        });
+      } else {
+        div.innerHTML += `<p>类型: ${dataArray.type} 值: ${dataArray.value} ${dataArray.unit}</p>`;
+      }
+    }
+
+    function displayLastDayData(city, dataArray, title) {
+      var div = document.getElementById("weatherData");
+      div.innerHTML += `<h2>${title}</h2>`;
+      let latestDate = new Date(Math.max(...dataArray.map(e => new Date(e.date))));
+      let lastDayData = dataArray.find(e => new Date(e.date).getTime() === latestDate.getTime());
+      if (lastDayData) {
+        div.innerHTML += `<p>类型: ${lastDayData.type} 值: ${lastDayData.value} ${lastDayData.unit}</p>`;
+      }
+    }
+  </script>
+
+
+  <script src="js/vendor/modernizr-3.11.2.min.js"></script>
+  <script src="js/plugins.js"></script>
+  <script src="js/main.js"></script>
+
+  <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
+  <script>
+    window.ga = function () { ga.q.push(arguments) }; ga.q = []; ga.l = +new Date;
+    ga('create', 'UA-XXXXX-Y', 'auto'); ga('set', 'anonymizeIp', true); ga('set', 'transport', 'beacon'); ga('send', 'pageview')
+  </script>
+  <script src="https://www.google-analytics.com/analytics.js" async></script>
+</body>
+
+</html>
