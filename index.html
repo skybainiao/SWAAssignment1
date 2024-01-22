@@ -29,21 +29,24 @@
     <button onclick="loadData('Horsens')">Horsens</button>
     <button onclick="loadData('Aarhus')">Aarhus</button>
     <button onclick="loadData('Copenhagen')">Copenhagen</button>
+    <a href="sendData.html">Send data</a>
+
+
   </div>
+
   <div id="weatherData"></div>
 
+
   <script>
+
+
+
     function loadData(city) {
       var div = document.getElementById("weatherData");
       div.innerHTML = `<h1>${city}</h1>`;
-
+      fetchSummaryData(city);
       fetchData(city, 'data', '最新测量值');
       fetchData(city, 'forecast', '未来24小时每小时预报');
-
-      fetchData(city, 'minTemperature', '最后一天最低气温');
-      fetchData(city, 'maxTemperature', '最后一天最高气温');
-      fetchData(city, 'totalPrecipitation', '前一天总降水量');
-      fetchData(city, 'averageWindSpeed', '前一日平均风速');
     }
 
     function fetchData(city, endpoint, title) {
@@ -51,11 +54,7 @@
       xhr.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
           var data = JSON.parse(this.responseText);
-          if (endpoint === 'minTemperature' || endpoint === 'maxTemperature' || endpoint === 'totalPrecipitation' || endpoint === 'averageWindSpeed') {
-            displayLastDayData(city, data, title);
-          } else {
-            displayData(city, data, title);
-          }
+          displayData(city, data, title);
         }
       };
       xhr.open("GET", `http://localhost:8080/${endpoint}/${city}`, true);
@@ -65,24 +64,111 @@
     function displayData(city, dataArray, title) {
       var div = document.getElementById("weatherData");
       div.innerHTML += `<h2>${title}</h2>`;
-      if (Array.isArray(dataArray)) {
-        dataArray.forEach(data => {
-          div.innerHTML += `<p>${data.time} - 类型: ${data.type} 值: ${data.value} ${data.unit}</p>`;
+      if (Array.isArray(dataArray) && dataArray.length > 0) {
+        // 首先，根据时间排序数组
+        dataArray.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+        // 仅选择未来24小时的数据
+        const now = new Date();
+        const hourlyData = dataArray.filter(data => {
+          const dataTime = new Date(data.time);
+          return dataTime > now && dataTime <= new Date(now.getTime() + 24*60*60*1000);
         });
+
+        // 显示未来24小时的每小时数据
+        hourlyData.forEach(data => {
+          div.innerHTML += `<p>${data.time} - 类型: ${data.type} 值: ${data.from} 到 ${data.to} ${data.unit}</p>`;
+        });
+
+        // 如果数组为空，则表示没有未来24小时的数据
+        if (hourlyData.length === 0) {
+          div.innerHTML += `<p>没有找到${city}未来24小时的${title}数据。</p>`;
+        }
       } else {
-        div.innerHTML += `<p>类型: ${dataArray.type} 值: ${dataArray.value} ${dataArray.unit}</p>`;
+        div.innerHTML += `<p>没有找到${city}的${title}数据。</p>`;
       }
     }
 
-    function displayLastDayData(city, dataArray, title) {
-      var div = document.getElementById("weatherData");
-      div.innerHTML += `<h2>${title}</h2>`;
-      let latestDate = new Date(Math.max(...dataArray.map(e => new Date(e.date))));
-      let lastDayData = dataArray.find(e => new Date(e.date).getTime() === latestDate.getTime());
-      if (lastDayData) {
-        div.innerHTML += `<p>类型: ${lastDayData.type} 值: ${lastDayData.value} ${lastDayData.unit}</p>`;
-      }
+
+    function fetchSummaryData(city) {
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+          var allData = JSON.parse(this.responseText);
+          displaySummaryData(city, allData);
+        }
+      };
+      xhr.open("GET", `http://localhost:8080/data/${city}`, true);
+      xhr.send();
     }
+
+    function displaySummaryData(city, allData) {
+      var div = document.getElementById("weatherData");
+
+      // 筛选出最后一天的数据
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24*60*60*1000);
+      const lastDayData = allData.filter(data => {
+        const dataTime = new Date(data.time);
+        return dataTime >= oneDayAgo && dataTime <= now;
+      });
+
+      // 计算最低和最高温度、总降水量和平均风速
+      const temperatures = lastDayData.filter(data => data.type === 'temperature').map(data => data.value);
+      const minTemperature = Math.min(...temperatures);
+      const maxTemperature = Math.max(...temperatures);
+
+      const precipitations = lastDayData.filter(data => data.type === 'precipitation').map(data => data.value);
+      const totalPrecipitation = precipitations.reduce((acc, val) => acc + val, 0);
+
+      const windSpeeds = lastDayData.filter(data => data.type === 'wind speed').map(data => data.value);
+      const averageWindSpeed = windSpeeds.reduce((acc, val) => acc + val, 0) / windSpeeds.length;
+
+      // 显示计算结果
+      div.innerHTML += `<h2>${city} 最后一天的数据总结</h2>`;
+      div.innerHTML += `<p>最低温度: ${minTemperature}°C</p>`;
+      div.innerHTML += `<p>最高温度: ${maxTemperature}°C</p>`;
+      div.innerHTML += `<p>总降水量: ${totalPrecipitation}mm</p>`;
+      div.innerHTML += `<p>平均风速: ${averageWindSpeed.toFixed(2)}m/s</p>`;
+    }
+
+
+
+//fetch method
+    function fetchData1(city, endpoint, title) {
+      fetch(`http://localhost:8080/${endpoint}/${city}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          displayData(city, data, title);
+        })
+        .catch(error => {
+          console.error('Fetch error:', error);
+        });
+    }
+
+    function fetchSummaryData1(city) {
+      fetch(`http://localhost:8080/data/${city}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(allData => {
+          displaySummaryData(city, allData);
+        })
+        .catch(error => {
+          console.error('Fetch error:', error);
+        });
+    }
+
+
+
   </script>
 
 

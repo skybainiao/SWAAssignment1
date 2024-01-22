@@ -20,7 +20,7 @@
   <label for="unit">unit:</label>
   <input type="text" id="unit" name="unit" required><br>
 
-  <button type="button" onclick="sendData()">sendData</button>
+  <button type="submit">sendData</button>
 </form>
 
 <script>
@@ -36,16 +36,24 @@
     var value = form.value.value;
     var unit = form.unit.value;
 
+    console.log("Sending data:", { city, type, value, unit });
+
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
-      if (this.readyState === 4 && this.status === 200) {
-        alert('数据发送成功!');
+      if (this.readyState === 4) {
+        if (this.status === 200 || this.status === 201) {
+          alert('数据发送成功!');
+        } else {
+          alert('数据发送失败: ' + this.status);
+        }
       }
     };
+
     xhr.open("POST", `http://localhost:8080/data`, true);
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
     xhr.send(JSON.stringify({ city: city, type: type, value: value, unit: unit }));
   }
+
 </script>
 </body>
 
